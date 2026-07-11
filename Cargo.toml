@@ -1,0 +1,19 @@
+[package]
+name = "zzpass-monitor"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Uptime monitor that probes service /health endpoints and emails on state change, on Cloudflare Workers."
+authors = ["Jonny Rein Eriksen"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+worker = { version = "0.8.5", features = ["d1"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1

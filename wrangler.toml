@@ -1,0 +1,40 @@
+name = "zzpass-monitor"
+main = "build/worker/shim.mjs"
+compatibility_date = "2026-06-01"
+workers_dev = false
+
+# Uptime prober for the escrow + telemetry workers. Runs ON Cloudflare, so it
+# catches "one service/DB down while the platform is up" (the common case) — but
+# NOT a full Cloudflare/zone outage. Pair with an external prober for that (see
+# README). No custom domain / public routes: it's cron-only + a /status page.
+routes = [
+  { pattern = "monitor.example.com", custom_domain = true }
+]
+
+[build]
+command = "cargo install -q worker-build && worker-build --release"
+
+# Probe every 30 minutes (detection cadence matched to human response time, not
+# minimized lag — a solo operator can't act in 2 min anyway; also keeps KV reads low).
+[triggers]
+crons = ["*/30 * * * *"]
+
+# Up/down state (dedupe: only email on transition, not every failed check).
+# Create once:  wrangler kv namespace create MONITOR_STATE  → paste id below.
+[[kv_namespaces]]
+binding = "STATE"
+id = "<your-kv-namespace-id>"
+
+[[ratelimits]]
+name = "STATUS_LIMITER"
+namespace_id = "3001"
+simple = { limit = 10, period = 60 }
+
+# Secrets (wrangler secret put …):
+#   EMAIL_API_KEY   Resend API key (can reuse escrow's)
+#   EMAIL_FROM      sender on a Resend-VERIFIED domain, e.g. alerts@mail.example.com
+#                   (root example.com is NOT verified → 403; reuse escrow's sender)
+#   ALERT_TO        where alerts go, e.g. your email
+#   STATUS_TOKEN    capability token for GET /status
+# Optional var (defaults to Resend):
+#   EMAIL_API_URL

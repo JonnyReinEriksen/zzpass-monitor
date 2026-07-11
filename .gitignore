@@ -1,0 +1,8 @@
+/target
+/build
+.dev.vars
+.wrangler/
+
+# open-source hygiene — never commit local state or secrets
+*.signing-key
+.DS_Store
